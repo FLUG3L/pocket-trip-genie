@@ -59,7 +59,12 @@ function MainApp() {
           .eq('id', user.id)
           .single();
         
-        if (data && !data.preferences?.onboardingCompleted) {
+        if (data && data.preferences) {
+          const preferences = data.preferences as any;
+          if (!preferences?.onboardingCompleted) {
+            setNeedsOnboarding(true);
+          }
+        } else {
           setNeedsOnboarding(true);
         }
       }
