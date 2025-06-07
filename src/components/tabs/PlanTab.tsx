@@ -2,139 +2,265 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, MapPin, Users, DollarSign } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, MapPin, Calendar, DollarSign, Users } from 'lucide-react';
+
+interface Trip {
+  id: string;
+  title: string;
+  destination: string;
+  start_date: string | null;
+  end_date: string | null;
+  budget: number | null;
+  status: string;
+  created_at: string;
+}
 
 export function PlanTab() {
-  const [trips] = useState([
-    {
-      id: 1,
-      title: 'Weekend in Chiang Mai',
-      destination: 'Chiang Mai, Thailand',
-      dates: 'Dec 15-17, 2024',
-      status: 'Planning',
-      budget: 5000,
-      collaborators: 2,
-      progress: 60,
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTrip, setNewTrip] = useState({
+    title: '',
+    destination: '',
+    start_date: '',
+    end_date: '',
+    budget: '',
+  });
+
+  const { data: trips, isLoading, refetch } = useQuery({
+    queryKey: ['trips'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Trip[];
     },
-    {
-      id: 2,
-      title: 'Bangkok Food Tour',
-      destination: 'Bangkok, Thailand',
-      dates: 'Jan 20-22, 2025',
-      status: 'Draft',
-      budget: 3000,
-      collaborators: 1,
-      progress: 20,
-    },
-  ]);
+    enabled: !!user,
+  });
 
-  return (
-    <div className="space-y-4 pb-20">
-      <div className="sticky top-0 bg-white z-10 p-4 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-blue-600">Plan</h1>
-            <p className="text-gray-600">Create and manage your trips</p>
-          </div>
-          <Button className="flex items-center">
-            <Plus className="h-4 w-4 mr-2" />
-            New Trip
-          </Button>
-        </div>
-      </div>
+  const handleCreateTrip = async () => {
+    if (!newTrip.title || !newTrip.destination || !user) return;
 
-      {/* AI Trip Planner */}
-      <div className="px-4">
-        <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold mb-2">🤖 AI Trip Planner</h3>
-            <p className="mb-4 opacity-90">Let AI create the perfect itinerary based on your preferences</p>
-            <Button variant="secondary" className="w-full">
-              Create AI Trip
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+    const { error } = await supabase
+      .from('trips')
+      .insert({
+        title: newTrip.title,
+        destination: newTrip.destination,
+        start_date: newTrip.start_date || null,
+        end_date: newTrip.end_date || null,
+        budget: newTrip.budget ? parseFloat(newTrip.budget) : null,
+        user_id: user.id,
+        status: 'PLANNING',
+      });
 
-      {/* Quick Templates */}
-      <div className="px-4">
-        <h3 className="font-semibold mb-3">Quick Templates</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-            <span className="text-2xl mb-1">🏖️</span>
-            <span className="text-sm">Weekend Getaway</span>
-          </Button>
-          <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-            <span className="text-2xl mb-1">🍜</span>
-            <span className="text-sm">Food Tour</span>
-          </Button>
-          <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-            <span className="text-2xl mb-1">🏔️</span>
-            <span className="text-sm">Adventure Trip</span>
-          </Button>
-          <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-            <span className="text-2xl mb-1">🏛️</span>
-            <span className="text-sm">Cultural Tour</span>
-          </Button>
-        </div>
-      </div>
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create trip. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      {/* Your Trips */}
-      <div className="px-4">
-        <h3 className="font-semibold mb-3">Your Trips</h3>
-        <div className="space-y-3">
-          {trips.map((trip) => (
-            <Card key={trip.id}>
+    toast({
+      title: "Trip Created!",
+      description: "Your new trip has been added to your plans.",
+    });
+
+    setNewTrip({
+      title: '',
+      destination: '',
+      start_date: '',
+      end_date: '',
+      budget: '',
+    });
+    setShowCreateForm(false);
+    refetch();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PLANNING': return 'bg-blue-100 text-blue-800';
+      case 'BOOKED': return 'bg-green-100 text-green-800';
+      case 'COMPLETED': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 pb-20">
+        <div className="animate-pulse space-y-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="h-32">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold">{trip.title}</h4>
-                    <div className="flex items-center text-sm text-gray-600 mt-1">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {trip.destination}
-                    </div>
-                  </div>
-                  <Badge variant={trip.status === 'Planning' ? 'default' : 'secondary'}>
-                    {trip.status}
-                  </Badge>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1 text-gray-500" />
-                    {trip.dates}
-                  </div>
-                  <div className="flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1 text-gray-500" />
-                    ฿{trip.budget.toLocaleString()}
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-1 text-gray-500" />
-                    {trip.collaborators} people
-                  </div>
-                </div>
-                
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span>Progress</span>
-                    <span>{trip.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
-                      style={{ width: `${trip.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <Button variant="outline" className="w-full mt-3">
-                  Continue Planning
-                </Button>
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
               </CardContent>
             </Card>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 pb-20 bg-gray-50 min-h-screen">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">My Trips</h1>
+          <p className="text-gray-600">Plan and manage your adventures</p>
+        </div>
+        <Button onClick={() => setShowCreateForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Trip
+        </Button>
+      </div>
+
+      {/* Create Trip Form */}
+      {showCreateForm && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Create New Trip</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="title">Trip Title</Label>
+              <Input
+                id="title"
+                value={newTrip.title}
+                onChange={(e) => setNewTrip({ ...newTrip, title: e.target.value })}
+                placeholder="Weekend in Chiang Mai"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="destination">Destination</Label>
+              <Input
+                id="destination"
+                value={newTrip.destination}
+                onChange={(e) => setNewTrip({ ...newTrip, destination: e.target.value })}
+                placeholder="Chiang Mai, Thailand"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="start_date">Start Date</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={newTrip.start_date}
+                  onChange={(e) => setNewTrip({ ...newTrip, start_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={newTrip.end_date}
+                  onChange={(e) => setNewTrip({ ...newTrip, end_date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="budget">Budget (฿)</Label>
+              <Input
+                id="budget"
+                type="number"
+                value={newTrip.budget}
+                onChange={(e) => setNewTrip({ ...newTrip, budget: e.target.value })}
+                placeholder="5000"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleCreateTrip} disabled={!newTrip.title || !newTrip.destination}>
+                Create Trip
+              </Button>
+              <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trips List */}
+      <div className="space-y-4">
+        {trips?.map((trip) => (
+          <Card key={trip.id} className="bg-white">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg">{trip.title}</CardTitle>
+                  <div className="flex items-center text-gray-600 mt-1">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    <span className="text-sm">{trip.destination}</span>
+                  </div>
+                </div>
+                <Badge className={getStatusColor(trip.status)}>
+                  {trip.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
+                {trip.start_date && (
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    <span>
+                      {new Date(trip.start_date).toLocaleDateString()} - {' '}
+                      {trip.end_date ? new Date(trip.end_date).toLocaleDateString() : 'TBD'}
+                    </span>
+                  </div>
+                )}
+                {trip.budget && (
+                  <div className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    <span>฿{trip.budget.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline">
+                  View Details
+                </Button>
+                <Button size="sm">
+                  Continue Planning
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {trips?.length === 0 && (
+          <Card className="text-center py-8">
+            <CardContent>
+              <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No trips yet</h3>
+              <p className="text-gray-600 mb-4">Start planning your next adventure!</p>
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Trip
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
