@@ -66,8 +66,15 @@ serve(async (req) => {
     });
 
     const geminiData = await geminiResponse.json();
-    const aiResponse = geminiData.candidates[0].content.parts[0].text;
+    console.log('Gemini raw response:', JSON.stringify(geminiData, null, 2));
 
+    // Check if the response has the expected structure
+    if (!geminiData.candidates || !geminiData.candidates[0] || !geminiData.candidates[0].content || !geminiData.candidates[0].content.parts || !geminiData.candidates[0].content.parts[0]) {
+      console.error('Unexpected Gemini response structure:', geminiData);
+      throw new Error('Invalid response from Gemini API');
+    }
+
+    const aiResponse = geminiData.candidates[0].content.parts[0].text;
     console.log('Gemini response:', aiResponse);
 
     // If creating a trip, parse the response and save to database
