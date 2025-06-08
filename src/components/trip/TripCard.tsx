@@ -1,8 +1,10 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Calendar, DollarSign, Users } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Map, ChevronDown, ChevronUp } from 'lucide-react';
+import { TripMap } from '@/components/map/TripMap';
 
 interface Trip {
   id: string;
@@ -24,6 +26,8 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardProps) {
+  const [showMap, setShowMap] = useState(false);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PLANNING': return 'bg-blue-100 text-blue-800';
@@ -37,6 +41,8 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
     if (!date) return 'TBD';
     return new Date(date).toLocaleDateString();
   };
+
+  const hasPlaces = trip.itinerary?.places && trip.itinerary.places.length > 0;
 
   return (
     <Card className="bg-white hover:shadow-md transition-shadow">
@@ -94,6 +100,30 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
           <p className="text-sm text-gray-600 line-clamp-2">
             {trip.itinerary.description}
           </p>
+        )}
+
+        {/* Map Toggle Button */}
+        {hasPlaces && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMap(!showMap)}
+            className="w-full"
+          >
+            <Map className="h-4 w-4 mr-2" />
+            {showMap ? 'Hide Map' : 'Show Map & Places'}
+            {showMap ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+          </Button>
+        )}
+
+        {/* Map Component */}
+        {showMap && hasPlaces && (
+          <div className="mt-4">
+            <TripMap 
+              places={trip.itinerary.places} 
+              destination={trip.destination}
+            />
+          </div>
         )}
         
         {/* Action Buttons */}

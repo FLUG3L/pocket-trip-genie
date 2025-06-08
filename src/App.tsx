@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,6 +14,7 @@ import { DiscoverTab } from '@/components/tabs/DiscoverTab';
 import { PlanTab } from '@/components/tabs/PlanTab';
 import { BookingsTab } from '@/components/tabs/BookingsTab';
 import { ProfileTab } from '@/components/tabs/ProfileTab';
+import { AIChatBot } from '@/components/ai/AIChatBot';
 import { supabase } from '@/integrations/supabase/client';
 
 const queryClient = new QueryClient();
@@ -108,10 +108,18 @@ function MainApp() {
     }
   };
 
+  const handleTripCreated = () => {
+    // Refresh the plan tab when a trip is created via AI
+    if (activeTab !== 'plan') {
+      setActiveTab('plan');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {renderActiveTab()}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <AIChatBot onTripCreated={handleTripCreated} />
     </div>
   );
 }
