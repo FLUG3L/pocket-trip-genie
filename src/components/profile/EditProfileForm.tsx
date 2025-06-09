@@ -29,29 +29,63 @@ export function EditProfileForm({ onClose }: EditProfileFormProps) {
 
     setIsLoading(true);
     try {
-      // Update user metadata
-      const { error: updateError } = await supabase.auth.updateUser({
+      // First ensure user record exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (!existingUser) {
+        // Create user record first
+        const { error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            full_name: formData.full_name,
+            preferences: {
+              bio: formData.bio,
+              location: formData.location,
+              onboardingCompleted: true
+            }
+          });
+
+        if (createError) {
+          console.error('Error creating user:', createError);
+          throw createError;
+        }
+      } else {
+        // Update existing user record
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            full_name: formData.full_name,
+            preferences: {
+              ...existingUser.preferences,
+              bio: formData.bio,
+              location: formData.location,
+            }
+          })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error updating user:', updateError);
+          throw updateError;
+        }
+      }
+
+      // Update user metadata in auth
+      const { error: authError } = await supabase.auth.updateUser({
         data: {
           full_name: formData.full_name,
         }
       });
 
-      if (updateError) throw updateError;
-
-      // Update or insert user profile
-      const { error: upsertError } = await supabase
-        .from('users')
-        .upsert({
-          id: user.id,
-          email: user.email!,
-          full_name: formData.full_name,
-          preferences: {
-            bio: formData.bio,
-            location: formData.location,
-          }
-        });
-
-      if (upsertError) throw upsertError;
+      if (authError) {
+        console.error('Error updating auth metadata:', authError);
+        // Don't throw here as the main profile update might have succeeded
+      }
 
       toast({
         title: "Profile updated",

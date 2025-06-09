@@ -26,7 +26,6 @@ export function CommunityTab() {
   const { data: posts, isLoading, refetch } = useQuery({
     queryKey: ['posts'],
     queryFn: async () => {
-      // First, ensure we have some sample data
       await createSamplePostsIfNeeded();
       
       const { data, error } = await supabase
@@ -52,76 +51,118 @@ export function CommunityTab() {
   });
 
   const createSamplePostsIfNeeded = async () => {
-    // Check if we have posts
-    const { data: existingPosts } = await supabase
-      .from('posts')
-      .select('id')
-      .limit(1);
+    try {
+      // Check if we have posts
+      const { data: existingPosts } = await supabase
+        .from('posts')
+        .select('id')
+        .limit(1);
 
-    if (!existingPosts || existingPosts.length === 0) {
-      // Create sample users and posts
-      const sampleUsers = [
-        { id: '123e4567-e89b-12d3-a456-426614174001', email: 'sarah@example.com', full_name: 'Sarah Chen' },
-        { id: '123e4567-e89b-12d3-a456-426614174002', email: 'mike@example.com', full_name: 'Mike Johnson' },
-        { id: '123e4567-e89b-12d3-a456-426614174003', email: 'emma@example.com', full_name: 'Emma Wilson' }
-      ];
+      if (!existingPosts || existingPosts.length === 0) {
+        // Create sample users first
+        const sampleUsers = [
+          { 
+            id: '11111111-1111-1111-1111-111111111111', 
+            email: 'sarah@example.com', 
+            full_name: 'Sarah Chen',
+            preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '22222222-2222-2222-2222-222222222222', 
+            email: 'mike@example.com', 
+            full_name: 'Mike Johnson',
+            preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '33333333-3333-3333-3333-333333333333', 
+            email: 'emma@example.com', 
+            full_name: 'Emma Wilson',
+            preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '44444444-4444-4444-4444-444444444444', 
+            email: 'alex@example.com', 
+            full_name: 'Alex Rodriguez',
+            preferences: { onboardingCompleted: true }
+          }
+        ];
 
-      // Insert sample users
-      for (const sampleUser of sampleUsers) {
-        await supabase.from('users').upsert(sampleUser);
-      }
-
-      // Insert sample posts
-      const samplePosts = [
-        {
-          user_id: sampleUsers[0].id,
-          content: "Just arrived in Tokyo! The cherry blossoms are absolutely stunning this time of year. Can't wait to explore all the amazing temples and try some authentic ramen! 🌸🍜",
-          likes_count: 15,
-          location: { city: 'Tokyo', country: 'Japan' }
-        },
-        {
-          user_id: sampleUsers[1].id,
-          content: "Amazing sunset view from Santorini! Nothing beats the Greek islands for a romantic getaway. The blue and white architecture is just breathtaking. Highly recommend! 🌅🏛️",
-          likes_count: 23,
-          location: { city: 'Santorini', country: 'Greece' }
-        },
-        {
-          user_id: sampleUsers[2].id,
-          content: "Street food tour in Bangkok was incredible! Tried pad thai from a local vendor and it was the best I've ever had. The flavors here are out of this world! 🥢🌶️",
-          likes_count: 18,
-          location: { city: 'Bangkok', country: 'Thailand' }
-        },
-        {
-          user_id: sampleUsers[0].id,
-          content: "Hiking the Inca Trail to Machu Picchu was challenging but so worth it! The views are absolutely magnificent. This is definitely a bucket list destination! 🏔️⛰️",
-          likes_count: 31,
-          location: { city: 'Cusco', country: 'Peru' }
-        },
-        {
-          user_id: sampleUsers[1].id,
-          content: "Paris is always a good idea! Spent the afternoon at the Louvre and evening by the Seine. The city of lights never disappoints. Already planning my next visit! 🗼✨",
-          likes_count: 12,
-          location: { city: 'Paris', country: 'France' }
+        // Insert sample users
+        for (const sampleUser of sampleUsers) {
+          await supabase.from('users').upsert(sampleUser, { onConflict: 'id' });
         }
-      ];
 
-      await supabase.from('posts').insert(samplePosts);
+        // Insert sample posts with Chiang Mai and Bangkok content
+        const samplePosts = [
+          {
+            user_id: sampleUsers[0].id,
+            content: "Just spent an amazing week in Chiang Mai! 🏛️ The temples are absolutely breathtaking, especially Wat Phra That Doi Suthep with its golden pagoda and stunning city views. The night markets are incredible - tried the most authentic Khao Soi at a local spot. The people are so welcoming and the mountain air is so refreshing! Can't wait to go back! ✨",
+            likes_count: 28,
+            location: { city: 'Chiang Mai', country: 'Thailand' }
+          },
+          {
+            user_id: sampleUsers[1].id,
+            content: "Bangkok is absolutely insane in the best way possible! 🏙️ Started my day at the Grand Palace (mind-blowing architecture), then took a longtail boat through the floating markets. Ended up at Chatuchak Weekend Market where I got lost for 4 hours and tried the most amazing street food. The energy of this city is unmatched! 🛺🍜",
+            likes_count: 35,
+            location: { city: 'Bangkok', country: 'Thailand' }
+          },
+          {
+            user_id: sampleUsers[2].id,
+            content: "Chiang Mai's Sunday Walking Street is pure magic! 🎨 Spent the entire evening browsing handmade crafts, watching street performers, and eating my weight in mango sticky rice. The local artists are incredibly talented - picked up some beautiful paintings and silver jewelry. This city has such a creative soul! 🌸",
+            likes_count: 22,
+            location: { city: 'Chiang Mai', country: 'Thailand' }
+          },
+          {
+            user_id: sampleUsers[3].id,
+            content: "Bangkok street food tour was the highlight of my trip! 🔥 From 40-baht Pad Thai that was better than any restaurant to boat noodles that cost 15 baht per bowl. Discovered this hidden gem in Chinatown serving the best Tom Yum I've ever had. My taste buds are still dancing! Pro tip: always eat where the locals eat! 🍲",
+            likes_count: 41,
+            location: { city: 'Bangkok', country: 'Thailand' }
+          },
+          {
+            user_id: sampleUsers[0].id,
+            content: "Took a cooking class in Chiang Mai and learned to make authentic Thai curry from scratch! 👩‍🍳 Started by picking fresh herbs from the garden, then learned the secrets of curry paste. The instructor was amazing and now I can recreate these flavors at home. Already planning my next trip back to learn more recipes! 🌶️",
+            likes_count: 19,
+            location: { city: 'Chiang Mai', country: 'Thailand' }
+          },
+          {
+            user_id: sampleUsers[1].id,
+            content: "Just witnessed the most incredible sunset from a rooftop bar in Bangkok! 🌅 The city lights stretching endlessly, the Chao Phraya River winding through the urban jungle, and the perfect mix of traditional and modern architecture. This city never fails to amaze me. Already booking my next trip! 🏙️✨",
+            likes_count: 33,
+            location: { city: 'Bangkok', country: 'Thailand' }
+          }
+        ];
+
+        const { error: postsError } = await supabase.from('posts').insert(samplePosts);
+        if (postsError) {
+          console.error('Error creating sample posts:', postsError);
+        } else {
+          console.log('Sample posts created successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error in createSamplePostsIfNeeded:', error);
     }
   };
 
   const handleCreatePost = async () => {
     if (!newPost.trim() || !user) return;
 
-    const { error } = await supabase
-      .from('posts')
-      .insert({
-        user_id: user.id,
-        content: newPost,
-      });
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          user_id: user.id,
+          content: newPost,
+        });
 
-    if (!error) {
-      setNewPost('');
-      refetch();
+      if (!error) {
+        setNewPost('');
+        refetch();
+      } else {
+        console.error('Error creating post:', error);
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
     }
   };
 
@@ -223,7 +264,7 @@ export function CommunityTab() {
           </Card>
         ))}
 
-        {posts?.length === 0 && (
+        {(!posts || posts.length === 0) && (
           <Card className="text-center py-8">
             <CardContent>
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
