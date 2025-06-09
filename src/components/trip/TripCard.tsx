@@ -51,39 +51,17 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
   const hasPlaces = trip.itinerary?.places && trip.itinerary.places.length > 0;
 
   const openGoogleMaps = (routeType: 'main' | 'scenic' = 'main') => {
-    if (hasPlaces && trip.itinerary.places.length > 0) {
-      const places = trip.itinerary.places;
-      const firstPlace = places[0];
-      
-      if (places.length === 1) {
-        // Single location
-        const url = `https://www.google.com/maps/search/?api=1&query=${firstPlace.lat},${firstPlace.lng}`;
-        window.open(url, '_blank');
-      } else {
-        // Multiple locations with directions
-        const origin = `${firstPlace.lat},${firstPlace.lng}`;
-        const destination = `${places[places.length - 1].lat},${places[places.length - 1].lng}`;
-        const waypoints = places.slice(1, -1).map(place => `${place.lat},${place.lng}`).join('|');
-        
-        let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
-        if (waypoints) {
-          url += `&waypoints=${waypoints}`;
-        }
-        
-        // Add route preference
-        if (routeType === 'scenic') {
-          url += '&avoid=highways';
-        } else {
-          url += '&avoid=tolls';
-        }
-        
-        window.open(url, '_blank');
-      }
+    let url: string;
+    
+    if (routeType === 'scenic') {
+      // เส้นทางธรรมชาติ
+      url = 'https://maps.app.goo.gl/hfaaTdEyK7vJ6wh67';
     } else {
-      // Just search for the destination
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.destination)}`;
-      window.open(url, '_blank');
+      // เส้นทางถนนใหญ่
+      url = 'https://maps.app.goo.gl/zsAtf5dDsZBUdGaJ7';
     }
+    
+    window.open(url, '_blank');
   };
 
   return (
