@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Calendar, DollarSign, Map, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Map, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { TripMap } from '@/components/map/TripMap';
 
 interface Trip {
@@ -43,6 +43,34 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
   };
 
   const hasPlaces = trip.itinerary?.places && trip.itinerary.places.length > 0;
+
+  const openGoogleMaps = () => {
+    if (hasPlaces && trip.itinerary.places.length > 0) {
+      const places = trip.itinerary.places;
+      const firstPlace = places[0];
+      
+      if (places.length === 1) {
+        // Single location
+        const url = `https://www.google.com/maps/search/?api=1&query=${firstPlace.lat},${firstPlace.lng}`;
+        window.open(url, '_blank');
+      } else {
+        // Multiple locations with directions
+        const origin = `${firstPlace.lat},${firstPlace.lng}`;
+        const destination = `${places[places.length - 1].lat},${places[places.length - 1].lng}`;
+        const waypoints = places.slice(1, -1).map(place => `${place.lat},${place.lng}`).join('|');
+        
+        let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+        if (waypoints) {
+          url += `&waypoints=${waypoints}`;
+        }
+        window.open(url, '_blank');
+      }
+    } else {
+      // Just search for the destination
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.destination)}`;
+      window.open(url, '_blank');
+    }
+  };
 
   return (
     <Card className="bg-white hover:shadow-md transition-shadow">
@@ -102,19 +130,31 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
           </p>
         )}
 
-        {/* Map Toggle Button */}
-        {hasPlaces && (
+        {/* Map Controls */}
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowMap(!showMap)}
-            className="w-full"
+            onClick={openGoogleMaps}
+            className="flex-1"
           >
-            <Map className="h-4 w-4 mr-2" />
-            {showMap ? 'Hide Map' : 'Show Map & Places'}
-            {showMap ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open in Google Maps
           </Button>
-        )}
+          
+          {hasPlaces && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMap(!showMap)}
+              className="flex-1"
+            >
+              <Map className="h-4 w-4 mr-2" />
+              {showMap ? 'Hide' : 'Show'} Map
+              {showMap ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+            </Button>
+          )}
+        </div>
 
         {/* Map Component */}
         {showMap && hasPlaces && (

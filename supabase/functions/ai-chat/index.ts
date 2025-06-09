@@ -29,90 +29,66 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Call Gemini API
-    const prompt = action === 'create_trip' 
-      ? `You are a travel planning assistant. Based on this request: "${message}", create a detailed trip plan. Return ONLY a JSON object with this exact structure:
-{
-  "title": "Trip title",
-  "destination": "Main destination",
-  "description": "Brief description",
-  "start_date": "YYYY-MM-DD",
-  "end_date": "YYYY-MM-DD", 
-  "budget": 5000,
-  "style": ["Adventure", "Cultural"],
-  "places": [
-    {
-      "name": "Place name",
-      "description": "Description",
-      "lat": 13.7563,
-      "lng": 100.5018,
-      "price_range": "$$",
-      "category": "Restaurant"
-    }
-  ]
-}`
-      : `You are a helpful travel assistant. Answer this question about travel: "${message}". Be concise and helpful.`;
-
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${googleApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
-      }),
-    });
-
-    const geminiData = await geminiResponse.json();
-    console.log('Gemini raw response:', JSON.stringify(geminiData, null, 2));
-
-    // Check if the response has the expected structure
-    if (!geminiData.candidates || !geminiData.candidates[0] || !geminiData.candidates[0].content || !geminiData.candidates[0].content.parts || !geminiData.candidates[0].content.parts[0]) {
-      console.error('Unexpected Gemini response structure:', geminiData);
-      throw new Error('Invalid response from Gemini API');
-    }
-
-    const aiResponse = geminiData.candidates[0].content.parts[0].text;
-    console.log('Gemini response:', aiResponse);
-
-    // If creating a trip, parse the response and save to database
+    // If creating a trip, try to create from template
     if (action === 'create_trip') {
       try {
-        const tripData = JSON.parse(aiResponse);
-        
-        // Create trip in database
+        // Create a basic trip based on the message
+        const destination = extractDestination(message) || 'Bangkok';
+        const duration = extractDuration(message) || 3;
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() + 7); // Start next week
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + duration);
+
+        const tripData = {
+          title: `Trip to ${destination}`,
+          destination: destination,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          budget: 15000,
+          style: ['Adventure', 'Cultural'],
+          user_id: userId,
+          status: 'PLANNING',
+          itinerary: {
+            description: `Explore the amazing ${destination} with this ${duration}-day adventure.`,
+            places: [
+              {
+                name: `${destination} City Center`,
+                description: `Explore the heart of ${destination}`,
+                lat: getCoordinates(destination).lat,
+                lng: getCoordinates(destination).lng,
+                price_range: "$$",
+                category: "Sightseeing"
+              },
+              {
+                name: `Local Restaurant in ${destination}`,
+                description: `Try authentic local cuisine`,
+                lat: getCoordinates(destination).lat + 0.01,
+                lng: getCoordinates(destination).lng + 0.01,
+                price_range: "$$$",
+                category: "Restaurant"
+              }
+            ]
+          }
+        };
+
         const { data: trip, error: tripError } = await supabase
           .from('trips')
-          .insert({
-            title: tripData.title,
-            destination: tripData.destination,
-            start_date: tripData.start_date,
-            end_date: tripData.end_date,
-            budget: tripData.budget,
-            style: tripData.style,
-            user_id: userId,
-            status: 'PLANNING',
-            itinerary: {
-              description: tripData.description,
-              places: tripData.places || []
-            }
-          })
+          .insert(tripData)
           .select()
           .single();
 
         if (tripError) throw tripError;
 
         return new Response(JSON.stringify({
-          response: `Trip "${tripData.title}" created successfully! I've planned your trip to ${tripData.destination}.`,
+          response: `Trip "${tripData.title}" created successfully! I've planned your ${duration}-day trip to ${destination}.`,
           trip: trip,
           action: 'trip_created'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      } catch (parseError) {
-        console.error('Error parsing trip data:', parseError);
+      } catch (error) {
+        console.error('Error creating trip:', error);
         return new Response(JSON.stringify({
           response: "I can help you plan a trip! Please provide more details like destination, dates, and budget.",
           action: 'error'
@@ -122,8 +98,11 @@ serve(async (req) => {
       }
     }
 
+    // For regular chat, provide helpful responses
+    const response = generateTravelResponse(message);
+
     return new Response(JSON.stringify({
-      response: aiResponse,
+      response: response,
       action: 'chat'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -131,12 +110,65 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in ai-chat function:', error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to process request',
-      details: error.message 
+      details: error.message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
+
+function extractDestination(message: string): string | null {
+  const destinations = ['Tokyo', 'Bangkok', 'Paris', 'London', 'New York', 'Seoul', 'Singapore', 'Dubai', 'Rome', 'Barcelona'];
+  for (const dest of destinations) {
+    if (message.toLowerCase().includes(dest.toLowerCase())) {
+      return dest;
+    }
+  }
+  return null;
+}
+
+function extractDuration(message: string): number {
+  const match = message.match(/(\d+)\s*(day|days)/i);
+  return match ? parseInt(match[1]) : 3;
+}
+
+function getCoordinates(destination: string) {
+  const coords: { [key: string]: { lat: number, lng: number } } = {
+    'Tokyo': { lat: 35.6762, lng: 139.6503 },
+    'Bangkok': { lat: 13.7563, lng: 100.5018 },
+    'Paris': { lat: 48.8566, lng: 2.3522 },
+    'London': { lat: 51.5074, lng: -0.1278 },
+    'New York': { lat: 40.7128, lng: -74.0060 },
+    'Seoul': { lat: 37.5665, lng: 126.9780 },
+    'Singapore': { lat: 1.3521, lng: 103.8198 },
+    'Dubai': { lat: 25.2048, lng: 55.2708 },
+    'Rome': { lat: 41.9028, lng: 12.4964 },
+    'Barcelona': { lat: 41.3851, lng: 2.1734 }
+  };
+  return coords[destination] || { lat: 13.7563, lng: 100.5018 };
+}
+
+function generateTravelResponse(message: string): string {
+  const lowerMessage = message.toLowerCase();
+  
+  if (lowerMessage.includes('where') || lowerMessage.includes('destination')) {
+    return "I can help you discover amazing destinations! Some popular options include Tokyo for culture and technology, Bangkok for delicious food and temples, or Paris for art and romance. What type of experience are you looking for?";
+  }
+  
+  if (lowerMessage.includes('budget') || lowerMessage.includes('cost')) {
+    return "Travel budgets vary greatly depending on destination and style. For Southeast Asia, $30-50/day is reasonable. For Europe, budget $80-120/day. For luxury travel, expect $200+/day. What's your target budget range?";
+  }
+  
+  if (lowerMessage.includes('when') || lowerMessage.includes('time')) {
+    return "The best time to travel depends on your destination and preferences. Generally, shoulder seasons (spring/fall) offer good weather and fewer crowds. What destination are you considering?";
+  }
+  
+  if (lowerMessage.includes('create') || lowerMessage.includes('plan') || lowerMessage.includes('trip')) {
+    return "I'd love to help you create a trip! Just tell me something like 'Create a trip to Tokyo for 5 days' and I'll plan an itinerary for you with places to visit and a budget estimate.";
+  }
+  
+  return "I'm your travel assistant! I can help you plan trips, suggest destinations, estimate budgets, and answer travel questions. Try asking me to create a trip or ask about travel destinations!";
+}

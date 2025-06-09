@@ -1,12 +1,15 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { Settings, Trophy, MapPin, Users, Star, LogOut } from 'lucide-react';
+import { Settings, Trophy, MapPin, Users, Star, LogOut, Edit } from 'lucide-react';
+import { EditProfileForm } from '@/components/profile/EditProfileForm';
 
 export function ProfileTab() {
   const { user, signOut } = useAuth();
+  const [showEditForm, setShowEditForm] = useState(false);
 
   const stats = [
     { label: 'Places Visited', value: '12', icon: '📍' },
@@ -21,6 +24,14 @@ export function ProfileTab() {
     { title: 'Explorer', emoji: '🗺️', unlocked: false },
     { title: 'Foodie', emoji: '🍜', unlocked: true },
   ];
+
+  if (showEditForm) {
+    return (
+      <div className="p-4 pb-20 bg-gray-50 min-h-screen">
+        <EditProfileForm onClose={() => setShowEditForm(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-20">
@@ -50,6 +61,14 @@ export function ProfileTab() {
                   <span className="ml-2 text-sm text-gray-600">850 points</span>
                 </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowEditForm(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
