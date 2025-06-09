@@ -57,7 +57,10 @@ export function EditProfileForm({ onClose }: EditProfileFormProps) {
         }
       } else {
         // Update existing user record with proper null checking
-        const currentPreferences = existingUser.preferences || {};
+        const currentPreferences = existingUser.preferences && typeof existingUser.preferences === 'object' 
+          ? existingUser.preferences 
+          : {};
+        
         const { error: updateError } = await supabase
           .from('users')
           .update({
