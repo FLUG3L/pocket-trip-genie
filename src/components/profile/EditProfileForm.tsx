@@ -56,13 +56,14 @@ export function EditProfileForm({ onClose }: EditProfileFormProps) {
           throw createError;
         }
       } else {
-        // Update existing user record
+        // Update existing user record with proper null checking
+        const currentPreferences = existingUser.preferences || {};
         const { error: updateError } = await supabase
           .from('users')
           .update({
             full_name: formData.full_name,
             preferences: {
-              ...existingUser.preferences,
+              ...currentPreferences,
               bio: formData.bio,
               location: formData.location,
             }
