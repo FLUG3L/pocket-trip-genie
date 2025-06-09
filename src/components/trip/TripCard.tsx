@@ -3,8 +3,14 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Calendar, DollarSign, Map, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Map, ChevronDown, ChevronUp, ExternalLink, Navigation, TreePine } from 'lucide-react';
 import { TripMap } from '@/components/map/TripMap';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Trip {
   id: string;
@@ -44,7 +50,7 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
 
   const hasPlaces = trip.itinerary?.places && trip.itinerary.places.length > 0;
 
-  const openGoogleMaps = () => {
+  const openGoogleMaps = (routeType: 'main' | 'scenic' = 'main') => {
     if (hasPlaces && trip.itinerary.places.length > 0) {
       const places = trip.itinerary.places;
       const firstPlace = places[0];
@@ -63,6 +69,14 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
         if (waypoints) {
           url += `&waypoints=${waypoints}`;
         }
+        
+        // Add route preference
+        if (routeType === 'scenic') {
+          url += '&avoid=highways';
+        } else {
+          url += '&avoid=tolls';
+        }
+        
         window.open(url, '_blank');
       }
     } else {
@@ -132,15 +146,25 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
 
         {/* Map Controls */}
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openGoogleMaps}
-            className="flex-1"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Open in Google Maps
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                เปิดใน Google Maps
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuItem onClick={() => openGoogleMaps('main')}>
+                <Navigation className="h-4 w-4 mr-2" />
+                เส้นทางถนนใหญ่
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openGoogleMaps('scenic')}>
+                <TreePine className="h-4 w-4 mr-2" />
+                เส้นทางธรรมชาติ
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           {hasPlaces && (
             <Button
@@ -150,7 +174,7 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
               className="flex-1"
             >
               <Map className="h-4 w-4 mr-2" />
-              {showMap ? 'Hide' : 'Show'} Map
+              {showMap ? 'ซ่อน' : 'แสดง'} แผนที่
               {showMap ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
             </Button>
           )}
@@ -174,14 +198,14 @@ export function TripCard({ trip, onViewDetails, onContinuePlanning }: TripCardPr
             onClick={() => onViewDetails?.(trip)}
             className="flex-1"
           >
-            View Details
+            ดูรายละเอียด
           </Button>
           <Button 
             size="sm"
             onClick={() => onContinuePlanning?.(trip)}
             className="flex-1"
           >
-            Continue Planning
+            วางแผนต่อ
           </Button>
         </div>
       </CardContent>
