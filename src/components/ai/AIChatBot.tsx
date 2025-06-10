@@ -7,7 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, X, Send, MapPin, Sparkles } from 'lucide-react';
+import { Bot, X, Send, MapPin, Sparkles, Settings } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface ChatMessage {
   id: string;
@@ -25,6 +33,10 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [n8nWebhookUrl, setN8nWebhookUrl] = useState(
+    localStorage.getItem('n8n_webhook_url') || ''
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -35,6 +47,38 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const sendToN8n = async (data: any) => {
+    if (!n8nWebhookUrl) return;
+
+    try {
+      await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'no-cors',
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          user_id: user?.id,
+          user_email: user?.email,
+          ...data
+        }),
+      });
+      console.log('Data sent to n8n successfully');
+    } catch (error) {
+      console.error('Error sending data to n8n:', error);
+    }
+  };
+
+  const saveN8nWebhook = () => {
+    localStorage.setItem('n8n_webhook_url', n8nWebhookUrl);
+    setIsSettingsOpen(false);
+    toast({
+      title: "Settings Saved",
+      description: "n8n webhook URL has been saved successfully.",
+    });
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || !user) return;
@@ -47,6 +91,14 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    
+    // Send user message to n8n
+    await sendToN8n({
+      event_type: 'user_message',
+      message: input,
+      action: 'chat_message'
+    });
+
     setInput('');
     setIsLoading(true);
 
@@ -81,7 +133,21 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
           description: "Your AI-generated trip has been added to your plans.",
         });
         onTripCreated?.(data.trip);
+
+        // Send trip creation event to n8n
+        await sendToN8n({
+          event_type: 'trip_created',
+          trip: data.trip,
+          action: 'trip_created'
+        });
       }
+
+      // Send AI response to n8n
+      await sendToN8n({
+        event_type: 'ai_response',
+        ai_response: data.response,
+        action: data.action || 'chat'
+      });
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -89,6 +155,13 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
         title: "Error",
         description: "Failed to send message. Please try again.",
         variant: "destructive",
+      });
+
+      // Send error event to n8n
+      await sendToN8n({
+        event_type: 'error',
+        error_message: error.message,
+        action: 'error'
       });
     } finally {
       setIsLoading(false);
@@ -104,13 +177,46 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
 
   if (!isOpen) {
     return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 z-50 rounded-full h-14 w-14 shadow-lg"
-        size="icon"
-      >
-        <Bot className="h-6 w-6" />
-      </Button>
+      <div className="fixed bottom-20 right-4 z-50">
+        <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="mb-2 h-10 w-10 rounded-full shadow-lg"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>n8n Integration Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="webhook-url">n8n Webhook URL</Label>
+                <Input
+                  id="webhook-url"
+                  value={n8nWebhookUrl}
+                  onChange={(e) => setN8nWebhookUrl(e.target.value)}
+                  placeholder="https://your-n8n-instance.com/webhook/your-webhook-id"
+                />
+              </div>
+              <Button onClick={saveN8nWebhook} className="w-full">
+                Save Settings
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="rounded-full h-14 w-14 shadow-lg"
+          size="icon"
+        >
+          <Bot className="h-6 w-6" />
+        </Button>
+      </div>
     );
   }
 
@@ -121,15 +227,52 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
           <CardTitle className="flex items-center gap-2 text-sm">
             <Sparkles className="h-4 w-4 text-blue-600" />
             AI Travel Assistant
+            {n8nWebhookUrl && (
+              <Badge variant="secondary" className="text-xs">
+                n8n Connected
+              </Badge>
+            )}
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsOpen(false)}
-            className="h-6 w-6"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                >
+                  <Settings className="h-3 w-3" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>n8n Integration Settings</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="webhook-url">n8n Webhook URL</Label>
+                    <Input
+                      id="webhook-url"
+                      value={n8nWebhookUrl}
+                      onChange={(e) => setN8nWebhookUrl(e.target.value)}
+                      placeholder="https://your-n8n-instance.com/webhook/your-webhook-id"
+                    />
+                  </div>
+                  <Button onClick={saveN8nWebhook} className="w-full">
+                    Save Settings
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsOpen(false)}
+              className="h-6 w-6"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col h-full pb-4">
