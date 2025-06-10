@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
@@ -18,9 +17,9 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { message, userId, action } = await req.json();
+    const { message, userId, action, n8nWebhookUrl, n8nResponse } = await req.json();
 
-    console.log('AI Chat request:', { message, userId, action });
+    console.log('AI Chat request:', { message, userId, action, n8nWebhookUrl, hasN8nResponse: !!n8nResponse });
 
     // Get user authentication
     const authHeader = req.headers.get('Authorization');
@@ -30,6 +29,42 @@ serve(async (req) => {
 
     // Ensure user exists in database
     await ensureUserExists(supabase, userId);
+
+    // If this is a response FROM n8n, just return it
+    if (n8nResponse) {
+      return new Response(JSON.stringify({
+        response: n8nResponse,
+        action: 'n8n_response'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // If n8n webhook URL is provided, try to get response from n8n first
+    if (n8nWebhookUrl && message) {
+      try {
+        const n8nResponse = await sendToN8nAndWaitForResponse(n8nWebhookUrl, {
+          timestamp: new Date().toISOString(),
+          user_id: userId,
+          user_email: (await supabase.auth.admin.getUserById(userId)).data?.user?.email,
+          event_type: 'user_message',
+          message: message,
+          action: action || 'chat'
+        });
+
+        if (n8nResponse && n8nResponse.response) {
+          return new Response(JSON.stringify({
+            response: n8nResponse.response,
+            action: 'n8n_response',
+            trip: n8nResponse.trip
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (error) {
+        console.error('n8n request failed, falling back to built-in AI:', error);
+      }
+    }
 
     // If creating a trip, try to create from template
     if (action === 'create_trip') {
@@ -106,6 +141,29 @@ serve(async (req) => {
     });
   }
 });
+
+async function sendToN8nAndWaitForResponse(webhookUrl: string, data: any) {
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`n8n webhook responded with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('n8n response received:', result);
+    return result;
+  } catch (error) {
+    console.error('Error calling n8n webhook:', error);
+    throw error;
+  }
+}
 
 async function ensureUserExists(supabase: any, userId: string) {
   try {

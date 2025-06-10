@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,29 +47,6 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const sendToN8n = async (data: any) => {
-    if (!n8nWebhookUrl) return;
-
-    try {
-      await fetch(n8nWebhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        mode: 'no-cors',
-        body: JSON.stringify({
-          timestamp: new Date().toISOString(),
-          user_id: user?.id,
-          user_email: user?.email,
-          ...data
-        }),
-      });
-      console.log('Data sent to n8n successfully');
-    } catch (error) {
-      console.error('Error sending data to n8n:', error);
-    }
-  };
-
   const saveN8nWebhook = () => {
     localStorage.setItem('n8n_webhook_url', n8nWebhookUrl);
     setIsSettingsOpen(false);
@@ -91,14 +67,6 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    
-    // Send user message to n8n
-    await sendToN8n({
-      event_type: 'user_message',
-      message: input,
-      action: 'chat_message'
-    });
-
     setInput('');
     setIsLoading(true);
 
@@ -111,7 +79,8 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
         body: {
           message: input,
           userId: user.id,
-          action: isCreateTripRequest ? 'create_trip' : 'chat'
+          action: isCreateTripRequest ? 'create_trip' : 'chat',
+          n8nWebhookUrl: n8nWebhookUrl || null
         }
       });
 
@@ -133,21 +102,7 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
           description: "Your AI-generated trip has been added to your plans.",
         });
         onTripCreated?.(data.trip);
-
-        // Send trip creation event to n8n
-        await sendToN8n({
-          event_type: 'trip_created',
-          trip: data.trip,
-          action: 'trip_created'
-        });
       }
-
-      // Send AI response to n8n
-      await sendToN8n({
-        event_type: 'ai_response',
-        ai_response: data.response,
-        action: data.action || 'chat'
-      });
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -155,13 +110,6 @@ export function AIChatBot({ onTripCreated }: AIChatBotProps) {
         title: "Error",
         description: "Failed to send message. Please try again.",
         variant: "destructive",
-      });
-
-      // Send error event to n8n
-      await sendToN8n({
-        event_type: 'error',
-        error_message: error.message,
-        action: 'error'
       });
     } finally {
       setIsLoading(false);
