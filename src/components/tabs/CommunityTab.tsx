@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, MapPin, Users, Camera } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Users, Camera, Bookmark } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +13,7 @@ interface Post {
   created_at: string;
   likes_count: number;
   location?: any;
+  media_urls?: string[];
   users: {
     full_name: string;
     avatar_url?: string;
@@ -36,6 +37,7 @@ export function CommunityTab() {
           created_at,
           likes_count,
           location,
+          media_urls,
           users (
             full_name,
             avatar_url
@@ -84,6 +86,30 @@ export function CommunityTab() {
             email: 'alex@example.com', 
             full_name: 'Alex Rodriguez',
             preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '55555555-5555-5555-5555-555555555555', 
+            email: 'nina@example.com', 
+            full_name: 'Nina Thai',
+            preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '66666666-6666-6666-6666-666666666666', 
+            email: 'david@example.com', 
+            full_name: 'David Kim',
+            preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '77777777-7777-7777-7777-777777777777', 
+            email: 'lisa@example.com', 
+            full_name: 'Lisa Park',
+            preferences: { onboardingCompleted: true }
+          },
+          { 
+            id: '88888888-8888-8888-8888-888888888888', 
+            email: 'james@example.com', 
+            full_name: 'James Brown',
+            preferences: { onboardingCompleted: true }
           }
         ];
 
@@ -92,43 +118,77 @@ export function CommunityTab() {
           await supabase.from('users').upsert(sampleUser, { onConflict: 'id' });
         }
 
-        // Insert sample posts with Chiang Mai and Bangkok content
+        // Insert sample posts with diverse content and images
         const samplePosts = [
           {
             user_id: sampleUsers[0].id,
-            content: "Just spent an amazing week in Chiang Mai! 🏛️ The temples are absolutely breathtaking, especially Wat Phra That Doi Suthep with its golden pagoda and stunning city views. The night markets are incredible - tried the most authentic Khao Soi at a local spot. The people are so welcoming and the mountain air is so refreshing! Can't wait to go back! ✨",
-            likes_count: 28,
-            location: { city: 'Chiang Mai', country: 'Thailand' }
+            content: "วิวดอยแม่ฮ่องสอน ช่วงฟ้าใสๆ แบบนี้ สวยจนหยุดหายใจ 🌄 เส้นทางขึ้นมาค่อนข้างท้าทาย แต่คุ้มมากกับวิวที่ได้เห็น! อากาศเย็นสบาย มีหมอกบางๆ ลอยอยู่ ทำให้รู้สึกเหมือนอยู่บนสวรรค์เลย ✨",
+            likes_count: 127,
+            location: { city: 'Pai', state: 'Mae Hong Son', country: 'Thailand' },
+            media_urls: ['/lovable-uploads/6228deba-95bf-4212-8117-31ab7eb736f1.png']
           },
           {
             user_id: sampleUsers[1].id,
-            content: "Bangkok is absolutely insane in the best way possible! 🏙️ Started my day at the Grand Palace (mind-blowing architecture), then took a longtail boat through the floating markets. Ended up at Chatuchak Weekend Market where I got lost for 4 hours and tried the most amazing street food. The energy of this city is unmatched! 🛺🍜",
-            likes_count: 35,
-            location: { city: 'Bangkok', country: 'Thailand' }
+            content: "เช้านี้ที่วัดพระธาตุดอยสุเทพ 🏛️ บรรยากาศเงียบสงบ แสงแรกของวันส่องผ่านต้นไผ่ สวยงามมาก นักท่องเที่ยวยังไม่มาเยอะ เลยได้ภาพสวยๆ แบบนี้มา การมาเวลาเช้าๆ ก่อน 7 โมง คุ้มมากจริงๆ!",
+            likes_count: 89,
+            location: { city: 'Chiang Mai', country: 'Thailand' },
+            media_urls: []
           },
           {
             user_id: sampleUsers[2].id,
-            content: "Chiang Mai's Sunday Walking Street is pure magic! 🎨 Spent the entire evening browsing handmade crafts, watching street performers, and eating my weight in mango sticky rice. The local artists are incredibly talented - picked up some beautiful paintings and silver jewelry. This city has such a creative soul! 🌸",
-            likes_count: 22,
-            location: { city: 'Chiang Mai', country: 'Thailand' }
+            content: "กิน Tom Yum ที่ดีที่สุดในชีวิต!! 🍲🔥 ร้านเล็กๆ ในตรอกย่านเยาวราช รสชาติเข้มข้น เปรี้ยว เผ็ด จัดจ้าน ตรงใจคนไทยแท้ๆ เจ้าของร้านใจดีมาก เล่าประวัติของสูตรที่สืบทอดมา 3 รุ่น 60 บาทเท่านั้น แต่อร่อยกว่าโรงแรม 5 ดาวเยอะ!",
+            likes_count: 156,
+            location: { city: 'Bangkok', country: 'Thailand' },
+            media_urls: []
           },
           {
             user_id: sampleUsers[3].id,
-            content: "Bangkok street food tour was the highlight of my trip! 🔥 From 40-baht Pad Thai that was better than any restaurant to boat noodles that cost 15 baht per bowl. Discovered this hidden gem in Chinatown serving the best Tom Yum I've ever had. My taste buds are still dancing! Pro tip: always eat where the locals eat! 🍲",
-            likes_count: 41,
-            location: { city: 'Bangkok', country: 'Thailand' }
+            content: "จังหวัดกระบี่ สวยจนต้องมาอีก! 🏖️ หาดไร่เลย์ น้ำใสใกล้จะใส ปลาเยอะมาก ดำน้ำดูปะการังสวยงาม โขดหินปูนที่น่าอัศจรรย์ และที่สำคัญ คนท้องถิ่นเป็นมิตรมาก ช่วยเหลือกันดี ตอนนี้กำลังวางแผนจะกลับมาใน 6 เดือน!",
+            likes_count: 203,
+            location: { city: 'Krabi', country: 'Thailand' },
+            media_urls: []
+          },
+          {
+            user_id: sampleUsers[4].id,
+            content: "สนุกมากกับการทำอาหารไทยที่เชียงใหม่! 👩‍🍳 เรียนทำแกงเขียวหวาน ต้มยำกุ้ง และข้าวเหนียวมะม่วง เริ่มจากการเด็ดผักสมุนไพรเองจากสวน จนถึงการปรุงรสให้ได้รสชาติที่แท้จริง คุณครูสอนดีมาก อธิบายวิธีและเคล็ดลับที่ทำให้อาหารอร่อย 🌶️🥭",
+            likes_count: 94,
+            location: { city: 'Chiang Mai', country: 'Thailand' },
+            media_urls: []
+          },
+          {
+            user_id: sampleUsers[5].id,
+            content: "เกาะสมุยช่วงนี้สวยมาก! 🌴 หาดละไมเงียบสงบ น้ำทะเลใส ลมเซาะ สายลมเย็นสบาย นั่งดื่มน้ำมะพร้าวเย็นๆ ดูพระอาทิตย์ตก บรรยากาศแบบนี้ทำให้ลืมความวุ่นวายในเมืองใหญ่ ธรรมชาติยังสวยงามมาก ไม่มีการพัฒนาเกินไป",
+            likes_count: 178,
+            location: { city: 'Koh Samui', state: 'Surat Thani', country: 'Thailand' },
+            media_urls: []
+          },
+          {
+            user_id: sampleUsers[6].id,
+            content: "ถนนข้าวสาร ย่านเก่าของกรุงเทพ 🏛️ เดินเล่นย้อนยุคในตรอกเล็กๆ เจอร้านขายของเก่า ร้านอาหารประจำท้องถิ่น และผู้คนที่อัธยาศัยดี การมาเที่ยวแบบนี้ทำให้เข้าใจวิถีชีวิตของคนกรุงเทพได้มากกว่าเดินเซ็นเตอร์ มีเสน่ห์แบบที่ไม่เหมือนใคร 🚶‍♀️",
+            likes_count: 67,
+            location: { city: 'Bangkok', country: 'Thailand' },
+            media_urls: []
+          },
+          {
+            user_id: sampleUsers[7].id,
+            content: "อุทยานแห่งชาติเขาใหญ่ ประสบการณ์ที่ไม่ลืม! 🦌 เจอสัตว์ป่าเยอะมาก เสียงนกร้องเพราะ อากาศเย็นสบาย และที่ประทับใจที่สุดคือเจอครอบครัวลิงแสมที่เล่นกันอย่างสนุกสนาน ป่าไผ่สวยงาม น้ำตกใส ธรรมชาติสมบูรณ์มาก ใครชอบธรรมชาติต้องมา! 🌿",
+            likes_count: 142,
+            location: { city: 'Khao Yai', state: 'Nakhon Ratchasima', country: 'Thailand' },
+            media_urls: []
           },
           {
             user_id: sampleUsers[0].id,
-            content: "Took a cooking class in Chiang Mai and learned to make authentic Thai curry from scratch! 👩‍🍳 Started by picking fresh herbs from the garden, then learned the secrets of curry paste. The instructor was amazing and now I can recreate these flavors at home. Already planning my next trip back to learn more recipes! 🌶️",
-            likes_count: 19,
-            location: { city: 'Chiang Mai', country: 'Thailand' }
+            content: "ตลาดน้ำดำเนินสะดวก วัฒนธรรมไทยแท้ๆ! 🛶 ขึ้นเรือหางยาวเที่ยวชมวิถีชีวิตริมคลอง ซื้อผลไม้สดจากแม่ค้าบนเรือ กิน ข้าวเหนียวมะม่วง แกงส้มปลาช่อน รสชาติดั้งเดิม บรรยากาศดีมาก คนไทยและต่างชาติมาเที่ยวพร้อมกัน บรรยากาศอบอุ่น",
+            likes_count: 188,
+            location: { city: 'Ratchaburi', country: 'Thailand' },
+            media_urls: []
           },
           {
             user_id: sampleUsers[1].id,
-            content: "Just witnessed the most incredible sunset from a rooftop bar in Bangkok! 🌅 The city lights stretching endlessly, the Chao Phraya River winding through the urban jungle, and the perfect mix of traditional and modern architecture. This city never fails to amaze me. Already booking my next trip! 🏙️✨",
-            likes_count: 33,
-            location: { city: 'Bangkok', country: 'Thailand' }
+            content: "ช่วงพระอาทิตย์ตกที่เขาตะเกียบ ประจวบคีรีขันธ์ 🌅 สีฟ้าทะเลผสมกับสีแสงแดดส้ม สวยงามมาก ลิงมาเล่นใกล้ๆ ไม่ดุ แต่ระวังของกิน อุณหภูมิเย็นสบาย ลมทะเลพัดเบาๆ จุดชมวิวนี้ไม่แพง แต่ได้ประสบการณ์มีค่ามาก วิวมหาสมุทรสวยจริงๆ",
+            likes_count: 134,
+            location: { city: 'Prachuap Khiri Khan', country: 'Thailand' },
+            media_urls: []
           }
         ];
 
@@ -221,7 +281,21 @@ export function CommunityTab() {
       {/* Posts Feed */}
       <div className="space-y-4">
         {posts?.map((post) => (
-          <Card key={post.id} className="bg-white">
+          <Card key={post.id} className="bg-white overflow-hidden">
+            {/* Post Image */}
+            {post.media_urls && post.media_urls.length > 0 && (
+              <div className="relative">
+                <img 
+                  src={post.media_urls[0]} 
+                  alt="Post image"
+                  className="w-full h-64 object-cover"
+                />
+                <button className="absolute top-4 right-4 bg-black/20 backdrop-blur-sm rounded-full p-2 text-white hover:bg-black/30 transition-colors">
+                  <Bookmark className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+            
             <CardHeader className="pb-3">
               <div className="flex items-center space-x-3">
                 <div className="h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -240,7 +314,11 @@ export function CommunityTab() {
                         <span>•</span>
                         <div className="flex items-center">
                           <MapPin className="h-3 w-3 mr-1" />
-                          <span>{post.location.city}, {post.location.country}</span>
+                          <span>
+                            {post.location.city}
+                            {post.location.state && `, ${post.location.state}`}
+                            {post.location.country && `, ${post.location.country}`}
+                          </span>
                         </div>
                       </>
                     )}
@@ -249,15 +327,20 @@ export function CommunityTab() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-gray-800 mb-4">{post.content}</p>
-              <div className="flex items-center space-x-6 text-gray-500">
-                <button className="flex items-center space-x-1 hover:text-red-500 transition-colors">
-                  <Heart className="h-5 w-5" />
-                  <span>{post.likes_count}</span>
-                </button>
-                <button className="flex items-center space-x-1 hover:text-blue-500 transition-colors">
-                  <MessageCircle className="h-5 w-5" />
-                  <span>Comment</span>
+              <p className="text-gray-800 mb-4 leading-relaxed">{post.content}</p>
+              <div className="flex items-center justify-between text-gray-500">
+                <div className="flex items-center space-x-6">
+                  <button className="flex items-center space-x-1 hover:text-red-500 transition-colors">
+                    <Heart className="h-5 w-5" />
+                    <span className="font-medium">{post.likes_count}</span>
+                  </button>
+                  <button className="flex items-center space-x-1 hover:text-blue-500 transition-colors">
+                    <MessageCircle className="h-5 w-5" />
+                    <span>212</span>
+                  </button>
+                </div>
+                <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <Bookmark className="h-5 w-5" />
                 </button>
               </div>
             </CardContent>
