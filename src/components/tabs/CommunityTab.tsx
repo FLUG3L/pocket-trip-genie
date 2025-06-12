@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Heart, MessageCircle, MapPin, Users, Camera, Bookmark } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -253,11 +254,11 @@ export function CommunityTab() {
       {/* Create Post */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <textarea
+          <Textarea
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
             placeholder="Share your travel story..."
-            className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
           />
           <div className="flex justify-between items-center mt-3">
